@@ -16,8 +16,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -55,7 +57,9 @@ var (
 		Scopes: []string{"clouddrive:read_all", "clouddrive:write"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://www.amazon.com/ap/oa",
-			TokenURL: "https://api.amazon.com/auth/o2/token",
+			TokenURL: "https://api.amazon.com/auth/token",
+			//AuthURL:  "http://localhost:8579/v3/cc354fac-b14c-4e4a-bbce-cc483a8256fe/pippo",
+			//TokenURL: "http://localhost:8579/v3/cc354fac-b14c-4e4a-bbce-cc483a8256fe/pippo",
 		},
 		ClientID:     "",
 		ClientSecret: "",
@@ -232,14 +236,43 @@ func (f *Fs) shouldRetry(resp *http.Response, err error) (bool, error) {
 // parameter, Signature query string parameter or the Authorization
 // header should be specified
 func filterRequest(req *http.Request) {
-	if req.URL.Query().Get("X-Amz-Algorithm") != "" {
-		fs.Debugf(nil, "Removing Authorization: header after redirect to S3")
-		req.Header.Del("Authorization")
+	//RM new logic for token renewing and embedding
+	//if req.URL.Query().Get("X-Amz-Algorithm") != "" {
+	fs.Debugf(nil, "Removing Authorization header")
+	req.Header.Del("Authorization")
+
+	token, err := oauthutil.GetToken(remoteName, configMapper)
+
+	if req.URL.Path == "/auth/token" {
+		req.Header.Set("x-amzn-identity-auth-domain", "api.amazon.com")
+		req.Header.Set("User-Agent", "AmazonWebView/MAPClientLib/130050002/Android/9/ONEPLUS A3003")
+		if err == nil {
+			req.Header.Set("Content-Type", "application/json")
+			new_body_content := `{"app_name":"com.amazon.drive","app_version":"130050002","source_token_type":"refresh_token","source_token":"` + token.RefreshToken + `","requested_token_type":"access_token"}`
+			req.Body = ioutil.NopCloser(strings.NewReader(new_body_content))
+			req.ContentLength = int64(len(new_body_content))
+		}
+	} else {
+		req.Header.Set("User-Agent", "CDFiles/-1 Android/9 android-sdk/1.1.1")
+		if err == nil {
+			req.Header.Set("x-amz-access-token", token.AccessToken)
+		}
 	}
+
+	//requestDump, err := httputil.DumpRequest(req, true)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println(string(requestDump))
 }
+
+var configMapper configmap.Mapper
+var remoteName string
 
 // NewFs constructs an Fs from the path, container:path
 func NewFs(name, root string, m configmap.Mapper) (fs.Fs, error) {
+	configMapper = m
+	remoteName = name
 	ctx := context.Background()
 	// Parse config into Options struct
 	opt := new(Options)
@@ -262,6 +295,9 @@ func NewFs(name, root string, m configmap.Mapper) (fs.Fs, error) {
 	}
 
 	c := acd.NewClient(oAuthClient)
+	//RM changed data to reflect the ones used by the Amazon Drive Android app
+	c.MetadataURL, _ = url.Parse("https://drive.amazonaws.com/drive/v1/pippo")
+
 	f := &Fs{
 		name:         name,
 		root:         root,
@@ -276,6 +312,16 @@ func NewFs(name, root string, m configmap.Mapper) (fs.Fs, error) {
 		CanHaveEmptyDirectories: true,
 	}).Fill(f)
 
+	// curl -X POST
+	//   -H "x-amzn-identity-auth-domain:api.amazon.com"
+	//   -H "User-Agent:AmazonWebView/MAPClientLib/130050002/Android/9/ONEPLUS A3003"
+	//   -H "Content-Type:application/json"
+	//   -H "Host:api.amazon.com"
+	//   -H "Connection:Keep-Alive"
+	//   -H "Accept-Encoding:gzip"
+	//   -H "Content-Length:673"
+	//   -d '{"app_name":"com.amazon.drive","app_version":"130050002","source_token_type":"refresh_token","source_token":"Atnr|EwICIDZM0P2P4mUPbGEJRJH1kVCk51NygF5UtraHHdMFo8T2uzSgbqyMzcJb1fxuTzsXmecmmofFkMyIGIKkG8-0wzGzHzZBm-wnr-I_s0JbIDemUTfDBr9yoQFCZBu3Ud8B2Nl9FGGqYRk8t1fIdRl_j27zSMBUD4UA7lyWGbtKz6b9-F2QasbT96L1YPSFMd1q13X4JuS2KQ6d7shWSHGch3KTa5_KG6tITY2UrL9UP82ocg","requested_token_type":"access_token","device_metadata":{"device_os_family":"android","device_type":"A1MPSLFC7L5AFK","device_serial":"de6a1cc821164b92a12d2865277af9ad","manufacturer":"OnePlus","model":"ONEPLUS A3003","os_version":"28","android_id":"3904dacd8a9c53e5","build_serial":"bafe98cb","product":"OnePlus3"}}'
+	//   "https://api.amazon.com/auth/token"
 	// Renew the token in the background
 	f.tokenRenewer = oauthutil.NewRenew(f.String(), ts, func() error {
 		_, err := f.getRootInfo()
