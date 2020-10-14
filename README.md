@@ -17,7 +17,7 @@
 
 Rclone *("rsync for cloud storage")* is a command line program to sync files and directories to and from different cloud storage providers.
 
-## Storage providers
+## Storage providers *(ALL DISABLED IN THIS FORK EXCEPT AMAZON DRIVE, TO REDUCE BINARY SIZE FOR MY SPECIFIC CASE)*
 
   * 1Fichier [:page_facing_up:](https://rclone.org/fichier/)
   * Alibaba Cloud (Aliyun) Object Storage System (OSS) [:page_facing_up:](https://rclone.org/s3/#alibaba-oss)

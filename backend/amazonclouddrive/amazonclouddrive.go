@@ -58,8 +58,6 @@ var (
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://www.amazon.com/ap/oa",
 			TokenURL: "https://api.amazon.com/auth/token",
-			//AuthURL:  "http://localhost:8579/v3/cc354fac-b14c-4e4a-bbce-cc483a8256fe/pippo",
-			//TokenURL: "http://localhost:8579/v3/cc354fac-b14c-4e4a-bbce-cc483a8256fe/pippo",
 		},
 		ClientID:     "",
 		ClientSecret: "",
@@ -320,7 +318,7 @@ func NewFs(name, root string, m configmap.Mapper) (fs.Fs, error) {
 	//   -H "Connection:Keep-Alive"
 	//   -H "Accept-Encoding:gzip"
 	//   -H "Content-Length:673"
-	//   -d '{"app_name":"com.amazon.drive","app_version":"130050002","source_token_type":"refresh_token","source_token":"Atnr|EwICIDZM0P2P4mUPbGEJRJH1kVCk51NygF5UtraHHdMFo8T2uzSgbqyMzcJb1fxuTzsXmecmmofFkMyIGIKkG8-0wzGzHzZBm-wnr-I_s0JbIDemUTfDBr9yoQFCZBu3Ud8B2Nl9FGGqYRk8t1fIdRl_j27zSMBUD4UA7lyWGbtKz6b9-F2QasbT96L1YPSFMd1q13X4JuS2KQ6d7shWSHGch3KTa5_KG6tITY2UrL9UP82ocg","requested_token_type":"access_token","device_metadata":{"device_os_family":"android","device_type":"A1MPSLFC7L5AFK","device_serial":"de6a1cc821164b92a12d2865277af9ad","manufacturer":"OnePlus","model":"ONEPLUS A3003","os_version":"28","android_id":"3904dacd8a9c53e5","build_serial":"bafe98cb","product":"OnePlus3"}}'
+	//   -d '{"app_name":"com.amazon.drive","app_version":"130050002","source_token_type":"refresh_token","source_token":"XXXX","requested_token_type":"access_token","device_metadata":{"device_os_family":"android","device_type":"YYYY","device_serial":"SSSSS","manufacturer":"OnePlus","model":"ONEPLUS A3003","os_version":"28","android_id":"IIIIII","build_serial":"BBBBBB","product":"OnePlus3"}}'
 	//   "https://api.amazon.com/auth/token"
 	// Renew the token in the background
 	f.tokenRenewer = oauthutil.NewRenew(f.String(), ts, func() error {
